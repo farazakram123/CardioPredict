@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CardioPredict - Heart Attack Risk Prediction</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        overflow: hidden;
+      }
+
+      .header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+      }
+
+      .header h1 {
+        font-size: 3em;
+        font-weight: bold;
+        letter-spacing: 2px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+      }
+
+      .header p {
+        margin-top: 10px;
+        font-size: 1.1em;
+        opacity: 0.9;
+      }
+
+      .form-container {
+        padding: 40px;
+      }
+
+      .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+        margin-bottom: 30px;
+      }
+
+      .form-group {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .form-group.full-width {
+        grid-column: 1 / -1;
+      }
+
+      label {
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #333;
+        font-size: 0.95em;
+      }
+
+      input[type="number"],
+      select {
+        padding: 12px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 1em;
+        transition: all 0.3s;
+      }
+
+      input[type="number"]:focus,
+      select:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      }
+
+      .predict-btn {
+        width: 100%;
+        padding: 15px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-size: 1.2em;
+        font-weight: bold;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .predict-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+      }
+
+      .predict-btn:active {
+        transform: translateY(0);
+      }
+
+      .result-container {
+        margin-top: 30px;
+        padding: 25px;
+        border-radius: 10px;
+        text-align: center;
+        display: none;
+      }
+
+      .result-container.risk {
+        background: #ffe5e5;
+        border: 2px solid #ff4444;
+      }
+
+      .result-container.no-risk {
+        background: #e5ffe5;
+        border: 2px solid #44ff44;
+      }
+
+      .result-text {
+        font-size: 1.5em;
+        font-weight: bold;
+        margin-bottom: 15px;
+      }
+
+      .result-container.risk .result-text {
+        color: #cc0000;
+      }
+
+      .result-container.no-risk .result-text {
+        color: #008800;
+      }
+
+      .result-details {
+        font-size: 1.1em;
+        color: #555;
+      }
+
+      .loading {
+        display: none;
+        text-align: center;
+        padding: 20px;
+      }
+
+      .spinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #667eea;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .error {
+        background: #ffe5e5;
+        border: 2px solid #ff4444;
+        color: #cc0000;
+        padding: 15px;
+        border-radius: 8px;
+        margin-top: 20px;
+        display: none;
+      }
+
+      @media (max-width: 768px) {
+        .form-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .header h1 {
+          font-size: 2em;
+        }
+
+        .form-container {
+          padding: 20px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>CardioPredict</h1>
+        <p>AI-Powered Heart Attack Risk Assessment</p>
+      </div>
+
+      <div class="form-container">
+        <form id="predictionForm">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="age">Age:</label>
+              <input
+                type="number"
+                id="age"
+                name="age"
+                required
+                min="1"
+                max="120"
+                placeholder="Enter age"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="sex">Sex:</label>
+              <select id="sex" name="sex" required>
+                <option value="">Select</option>
+                <option value="M">Male</option>
+                <option value="F">Female</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="chest_pain_type">Chest Pain Type:</label>
+              <select id="chest_pain_type" name="chest_pain_type" required>
+                <option value="">Select</option>
+                <option value="ATA">Atypical Angina (ATA)</option>
+                <option value="NAP">Non-Anginal Pain (NAP)</option>
+                <option value="ASY">Asymptomatic (ASY)</option>
+                <option value="TA">Typical Angina (TA)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="resting_bp">Resting BP (mm Hg):</label>
+              <input
+                type="number"
+                id="resting_bp"
+                name="resting_bp"
+                required
+                min="50"
+                max="250"
+                placeholder="e.g., 120"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="cholesterol">Cholesterol (mg/dl):</label>
+              <input
+                type="number"
+                id="cholesterol"
+                name="cholesterol"
+                required
+                min="0"
+                max="600"
+                placeholder="e.g., 200"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="fasting_bs">Fasting Blood Sugar:</label>
+              <select id="fasting_bs" name="fasting_bs" required>
+                <option value="">Select</option>
+                <option value="0">Normal (&lt; 120 mg/dl)</option>
+                <option value="1">High (&gt; 120 mg/dl)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="resting_ecg">Resting ECG:</label>
+              <select id="resting_ecg" name="resting_ecg" required>
+                <option value="">Select</option>
+                <option value="Normal">Normal</option>
+                <option value="ST">ST-T Wave Abnormality (ST)</option>
+                <option value="LVH">Left Ventricular Hypertrophy (LVH)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="max_hr">Max Heart Rate:</label>
+              <input
+                type="number"
+                id="max_hr"
+                name="max_hr"
+                required
+                min="60"
+                max="220"
+                placeholder="e.g., 150"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="exercise_angina">Exercise-Induced Angina:</label>
+              <select id="exercise_angina" name="exercise_angina" required>
+                <option value="">Select</option>
+                <option value="Y">Yes</option>
+                <option value="N">No</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="oldpeak">Oldpeak (ST Depression):</label>
+              <input
+                type="number"
+                id="oldpeak"
+                name="oldpeak"
+                required
+                step="0.1"
+                min="-5"
+                max="10"
+                placeholder="e.g., 1.5"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="st_slope">ST Slope:</label>
+              <select id="st_slope" name="st_slope" required>
+                <option value="">Select</option>
+                <option value="Up">Upsloping</option>
+                <option value="Flat">Flat</option>
+                <option value="Down">Downsloping</option>
+              </select>
+            </div>
+          </div>
+
+          <button type="submit" class="predict-btn">Click to Predict</button>
+        </form>
+
+        <div class="loading" id="loading">
+          <div class="spinner"></div>
+          <p style="margin-top: 10px">Analyzing...</p>
+        </div>
+
+        <div class="error" id="error"></div>
+
+        <div class="result-container" id="result">
+          <div class="result-text" id="resultText"></div>
+          <div class="result-details">
+            <p>
+              <strong>Risk Probability:</strong>
+              <span id="riskPercentage"></span>
+            </p>
+            <p><strong>Confidence:</strong> <span id="confidence"></span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      document
+        .getElementById("predictionForm")
+        .addEventListener("submit", async function (e) {
+          e.preventDefault();
+
+          // Hide previous results and errors
+          document.getElementById("result").style.display = "none";
+          document.getElementById("error").style.display = "none";
+          document.getElementById("loading").style.display = "block";
+
+          // Get form data
+          const formData = new FormData(this);
+
+          try {
+            const response = await fetch("/predict", {
+              method: "POST",
+              body: formData,
+            });
+
+            const data = await response.json();
+
+            document.getElementById("loading").style.display = "none";
+
+            if (data.error) {
+              document.getElementById("error").textContent = data.error;
+              document.getElementById("error").style.display = "block";
+            } else {
+              const resultContainer = document.getElementById("result");
+              resultContainer.className =
+                "result-container " + data.result_class;
+              document.getElementById("resultText").textContent = data.result;
+              document.getElementById("riskPercentage").textContent =
+                data.risk_percentage;
+              document.getElementById("confidence").textContent =
+                data.confidence;
+              resultContainer.style.display = "block";
+            }
+          } catch (error) {
+            document.getElementById("loading").style.display = "none";
+            document.getElementById("error").textContent =
+              "Error connecting to server. Please try again.";
+            document.getElementById("error").style.display = "block";
+          }
+        });
+    </script>
+  </body>
+</html>
